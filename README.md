@@ -1,6 +1,6 @@
 # kt
 
-kt is short for Kubernetes Tail. It behaves like `kubect logs -f` and 
+kt is short for Kubernetes Tail. It behaves like `kubect logs -f` and
 its syntax is similar to `kubectl get`.
 
 # 0. Features
@@ -14,7 +14,19 @@ switches to running phase from pending phase.
 
 # 1. Usage
 
-#### 1.1 Filter pods by name or regexp
+#### 1.1 Install bash/zsh completion
+
+> NOTE: If you install `kt` using homebrew, the completion is already installed.
+
+Load the completion code into current shell
+```
+## bash
+$ source <(kt --completion bash)
+## zsh
+$ source <(kt --completion zsh)
+```
+
+#### 1.2 Filter pods by name or regexp
 
 ```
 $ kt foo
@@ -25,13 +37,13 @@ or
 $ kt 'foo-\w+'
 ```
 
-#### 1.2 Filter pods by labels
+#### 1.3 Filter pods by labels
 
 ```
 $ kt -n prod -lapp=foo
 ```
 
-#### 1.3 Tails pods belong to a higher level object
+#### 1.4 Tails pods belong to a higher level object
 
 Currently only the following resources are supported:
 * Service
@@ -61,4 +73,4 @@ $ kt --cluster dev --tail 10 job foo
 $ kt --tail 10 rs foo
 ```
 
-
+# 2. Installtion
