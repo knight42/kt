@@ -105,13 +105,13 @@ func (c *Controller) Run() error {
 		}
 		switch ev.Type {
 		case watch.Added:
-			log.Errorf("[%s] new pod detected", pod.Name)
+			log.Errorf("[%s] >>> pod added", pod.Name)
 			c.onPodAdded(pod)
 		case watch.Modified:
 			log.V(4).Infof(">>>>> [DEBUG] pod modified: %s", pod.Name)
 			c.onPodModified(pod)
 		case watch.Deleted:
-			log.Errorf("[%s] pod deleted", pod.Name)
+			log.Errorf("[%s] >>> pod deleted", pod.Name)
 			c.onPodDeleted(pod)
 		}
 	}
@@ -120,7 +120,7 @@ func (c *Controller) Run() error {
 
 func (c *Controller) onPodAdded(pod *corev1.Pod) {
 	names := getContainerNames(pod, c.containerNameRegex)
-	log.V(4).Infof(">>>>> [DEBUG] pod: %s, names: %v", pod.Name, names)
+	log.V(4).Infof(">>>>> [DEBUG] new pod: %s, names: %v", pod.Name, names)
 	if len(names) == 0 {
 		return
 	}
@@ -141,6 +141,7 @@ func (c *Controller) onPodModified(pod *corev1.Pod) {
 		return
 	}
 	names := getRetryableContainerNames(pod)
+	log.V(4).Infof(">>>>> [DEBUG] modified pod: %s, retryable containers: %v", pod.Name, names)
 	if len(names) == 0 {
 		return
 	}

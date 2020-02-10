@@ -13,13 +13,8 @@ import (
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/knight42/kt/pkg/completion"
 	"github.com/knight42/kt/pkg/controller"
 )
-
-// kt -lapp=qwe
-// kt deploy app
-// kt 'app\w+'
 
 const (
 	modeByNameRegex uint8 = iota
@@ -27,13 +22,14 @@ const (
 )
 
 type Options struct {
+	// TODO
+	color        string
 	selector     string
 	sinceSeconds time.Duration
 	sinceTime    string
 	timestamps   bool
 	tail         int64
 	container    string
-	shell        string
 
 	restClientGetter genericclioptions.RESTClientGetter
 
@@ -46,10 +42,6 @@ type Options struct {
 }
 
 func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []string) error {
-	if len(o.shell) > 0 {
-		return nil
-	}
-
 	o.restClientGetter = getter
 
 	var err error
@@ -122,10 +114,6 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 }
 
 func (o *Options) Run(cmd *cobra.Command) error {
-	if len(o.shell) > 0 {
-		return completion.Generate(cmd, o.shell)
-	}
-
 	logsOptions, err := o.toLogsOptions()
 	if err != nil {
 		return err

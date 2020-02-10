@@ -20,7 +20,7 @@ func getContainerNames(pod *corev1.Pod, pat *regexp.Regexp) (names map[string]st
 }
 
 func isCloseEnough(l metav1.Time, r time.Time) bool {
-	return r.Sub(l.Time) < time.Second
+	return r.Sub(l.Time) < time.Second*2
 }
 
 func getRetryableContainerNames(pod *corev1.Pod) []string {

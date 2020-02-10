@@ -7,6 +7,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
@@ -74,11 +75,18 @@ func getPodsSelector(obj runtime.Object) (map[string]string, error) {
 	case *batchv2alpha1.CronJob:
 		return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
 
-	default:
-		return nil, fmt.Errorf("unknown object: %v", obj.GetObjectKind().GroupVersionKind())
-	}
-}
+	// FIXME
+	case *autoscalingv1.HorizontalPodAutoscaler:
 
-func Int64(i int64) *int64 {
-	return &i
+	// Deprecated ReplicationController
+	case *corev1.ReplicationController:
+		return t.Spec.Selector, nil
+
+	// ReplicaSet
+	case *appsv1.ReplicaSet:
+		return t.Spec.Selector.MatchLabels, nil
+	case *extensionsv1beta1.ReplicaSet:
+		return t.Spec.Selector.MatchLabels, nil
+	}
+	return nil, fmt.Errorf("unknown object: %#v", obj)
 }
