@@ -18,17 +18,19 @@ var (
 type Verbose bool
 
 func AddFlags(flags *pflag.FlagSet) {
-	flags.IntVar(&verbosity, "v", 0, "number for the log level verbosity")
+	flags.IntVarP(&verbosity, "v", "v", 0, "number for the log level verbosity")
 }
 
 func Errorf(fmt string, v ...interface{}) {
-	stderr.Printf(fmt, v)
+	stderr.Printf(fmt, v...)
 }
 
 func V(level int) Verbose {
-	return level >= verbosity
+	return level <= verbosity
 }
 
 func (v Verbose) Infof(fmt string, args ...interface{}) {
-	stderr.Printf(fmt, args)
+	if v {
+		stderr.Printf(fmt, args...)
+	}
 }
