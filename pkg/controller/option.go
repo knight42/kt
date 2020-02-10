@@ -18,7 +18,7 @@ func WithContainerNameRegexp(pat *regexp.Regexp) Option {
 	}
 }
 
-func WithPodLabelsSelector(selector map[string]string) Option {
+func WithPodLabelsSelector(selector string) Option {
 	return func(t *Controller) {
 		t.labelSelector = selector
 	}

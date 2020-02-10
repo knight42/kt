@@ -8,7 +8,6 @@ import (
 
 	"github.com/fatih/color"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -30,7 +29,7 @@ type Controller struct {
 
 	enableColor bool
 
-	labelSelector map[string]string
+	labelSelector string
 
 	logCh chan *api.Log
 
@@ -98,7 +97,7 @@ func (c *Controller) Run() error {
 		result = builder.SelectAllParam(true).Do()
 	} else {
 		// select pods using labels
-		result = builder.LabelSelectorParam(labels.FormatLabels(c.labelSelector)).Do()
+		result = builder.LabelSelectorParam(c.labelSelector).Do()
 	}
 
 	if err := result.Err(); err != nil {

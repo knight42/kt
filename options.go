@@ -22,7 +22,6 @@ const (
 )
 
 type Options struct {
-	// TODO
 	color        string
 	selector     string
 	sinceSeconds time.Duration
@@ -33,9 +32,8 @@ type Options struct {
 
 	restClientGetter genericclioptions.RESTClientGetter
 
-	mode          uint8
-	namespace     string
-	labelSelector map[string]string
+	mode      uint8
+	namespace string
 
 	podNamePattern       *regexp.Regexp
 	containerNamePattern *regexp.Regexp
@@ -67,10 +65,6 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 	case 0:
 		if len(o.selector) == 0 {
 			return fmt.Errorf("empty selector")
-		}
-		o.labelSelector, err = labels.ConvertSelectorToLabelsMap(o.selector)
-		if err != nil {
-			return err
 		}
 		o.mode = modeByLabels
 	case 1:
@@ -109,7 +103,7 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 			if err != nil {
 				return err
 			}
-			o.labelSelector = selector
+			o.selector = labels.FormatLabels(selector)
 			o.mode = modeByLabels
 		}
 	}
@@ -127,7 +121,7 @@ func (o *Options) Run(cmd *cobra.Command) error {
 	opts := []controller.Option{controller.WithColor(o.color)}
 	switch o.mode {
 	case modeByLabels:
-		opts = append(opts, controller.WithPodLabelsSelector(o.labelSelector))
+		opts = append(opts, controller.WithPodLabelsSelector(o.selector))
 	case modeByNameRegex:
 		opts = append(opts, controller.WithPodNameRegexp(o.podNamePattern))
 	}
