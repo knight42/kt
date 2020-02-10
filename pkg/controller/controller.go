@@ -93,7 +93,7 @@ func (c *Controller) Run() error {
 		WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
 		NamespaceParam(c.namespace).DefaultNamespace().
 		ResourceTypes("pods").SingleResourceType().
-		Latest()
+		Flatten().Latest()
 	if byName {
 		result = builder.SelectAllParam(true).Do()
 	} else {
@@ -103,6 +103,30 @@ func (c *Controller) Run() error {
 
 	if err := result.Err(); err != nil {
 		return err
+	}
+
+	infos, err := result.Infos()
+	if err != nil {
+		return err
+	}
+	if len(infos) == 0 {
+		return fmt.Errorf("no matched pods found")
+	}
+	if byName {
+		found := false
+		for _, info := range infos {
+			pod, ok := info.Object.(*corev1.Pod)
+			if !ok {
+				continue
+			}
+			if c.podNameRegex.MatchString(pod.Name) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("no matched pods found")
+		}
 	}
 
 	watcher, err := result.Watch("")
