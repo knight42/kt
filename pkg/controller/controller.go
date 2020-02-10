@@ -2,9 +2,11 @@ package controller
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"regexp"
 
+	"github.com/fatih/color"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,7 +25,10 @@ type Controller struct {
 	f           genericclioptions.RESTClientGetter
 	kubeClient  kubernetes.Interface
 	namespace   string
+	color       string
 	logsOptions *corev1.PodLogOptions
+
+	enableColor bool
 
 	labelSelector map[string]string
 
@@ -55,6 +60,17 @@ func (c *Controller) Run() error {
 	)
 
 	go c.consumeLog()
+
+	switch c.color {
+	case "always":
+		c.enableColor = true
+	case "auto":
+		c.enableColor = !color.NoColor
+	case "never":
+		c.enableColor = false
+	default:
+		return fmt.Errorf("unkown value of flag `color`: %s", c.color)
+	}
 
 	byName := c.podNameRegex != nil
 
@@ -105,13 +121,13 @@ func (c *Controller) Run() error {
 		}
 		switch ev.Type {
 		case watch.Added:
-			log.Errorf("[%s] >>> pod added", pod.Name)
+			log.Errorf("+ [%s] pod added", pod.Name)
 			c.onPodAdded(pod)
 		case watch.Modified:
 			log.V(4).Infof(">>>>> [DEBUG] pod modified: %s", pod.Name)
 			c.onPodModified(pod)
 		case watch.Deleted:
-			log.Errorf("[%s] >>> pod deleted", pod.Name)
+			log.Errorf("- [%s] pod deleted", pod.Name)
 			c.onPodDeleted(pod)
 		}
 	}
@@ -127,6 +143,7 @@ func (c *Controller) onPodAdded(pod *corev1.Pod) {
 	t := tailer.New(
 		c.namespace, pod.Name,
 		names,
+		c.enableColor,
 		c.kubeClient,
 		c.logsOptions,
 		c.logCh,
@@ -160,7 +177,12 @@ func (c *Controller) onPodDeleted(pod *corev1.Pod) {
 func (c *Controller) consumeLog() {
 	w := bufio.NewWriter(os.Stdout)
 	for i := range c.logCh {
-		_, _ = w.WriteString("[" + i.Pod + "/" + i.Container + "] ")
+		if i.PodColor != nil {
+			_, _ = i.PodColor.Fprint(w, i.Pod)
+			_, _ = i.ContainerColor.Fprintf(w, "[%s] ", i.Container)
+		} else {
+			_, _ = w.WriteString(i.Pod + "[" + i.Container + "] ")
+		}
 		_, _ = w.Write(i.Content)
 		_ = w.Flush()
 	}

@@ -23,3 +23,9 @@ func WithPodLabelsSelector(selector map[string]string) Option {
 		t.labelSelector = selector
 	}
 }
+
+func WithColor(when string) Option {
+	return func(t *Controller) {
+		t.color = when
+	}
+}

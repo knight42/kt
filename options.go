@@ -57,6 +57,12 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 		}
 	}
 
+	switch o.color {
+	case "auto", "always", "never":
+	default:
+		return fmt.Errorf("unkown value of flag `color`: %s", o.color)
+	}
+
 	switch len(args) {
 	case 0:
 		if len(o.selector) == 0 {
@@ -118,7 +124,7 @@ func (o *Options) Run(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	var opts []controller.Option
+	opts := []controller.Option{controller.WithColor(o.color)}
 	switch o.mode {
 	case modeByLabels:
 		opts = append(opts, controller.WithPodLabelsSelector(o.labelSelector))

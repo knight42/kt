@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/fatih/color"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -30,11 +31,16 @@ type Tailer interface {
 func New(
 	ns, name string,
 	ctNames map[string]struct{},
+	enableColor bool,
 	client kubernetes.Interface,
 	logsOptions *corev1.PodLogOptions,
 	logCh chan<- *api.Log,
 ) Tailer {
 	rootCtx, cancel := context.WithCancel(context.Background())
+	var podColor, ctColor *color.Color
+	if enableColor {
+		podColor, ctColor = pickColor()
+	}
 	return &tailer{
 		client:      client,
 		namespace:   ns,
@@ -43,9 +49,11 @@ func New(
 		logsOptions: logsOptions,
 		logCh:       logCh,
 
-		rootCtx: rootCtx,
-		cancel:  cancel,
-		tasks:   make(map[string]Task),
+		rootCtx:  rootCtx,
+		cancel:   cancel,
+		tasks:    make(map[string]Task),
+		podColor: podColor,
+		ctColor:  ctColor,
 	}
 }
 
@@ -60,6 +68,8 @@ type tailer struct {
 	rootCtx context.Context
 	cancel  context.CancelFunc
 	tasks   map[string]Task
+
+	podColor, ctColor *color.Color
 }
 
 func (t *tailer) Tail() {
@@ -94,9 +104,11 @@ func (t *tailer) fetchLog(ctx context.Context, container string) error {
 			return err
 		}
 		t.logCh <- &api.Log{
-			Pod:       t.podName,
-			Container: container,
-			Content:   bytes,
+			Pod:            t.podName,
+			Container:      container,
+			Content:        bytes,
+			PodColor:       t.podColor,
+			ContainerColor: t.ctColor,
 		}
 	}
 }

@@ -83,6 +83,11 @@ __kt_get_resource_namespace()
 {
     __kt_parse_get "namespace"
 }
+__kt_parse_color()
+{
+    local kt_out=('auto' 'never' 'always')
+    COMPREPLY+=( $( compgen -W "${kt_out[*]}" -- "$cur" ) )
+}
 __kt_abort() {
     return 1
 }
@@ -98,6 +103,7 @@ var (
 		"context":   "__kt_config_get_contexts",
 		"cluster":   "__kt_config_get_clusters",
 		"user":      "__kt_config_get_users",
+		"color":     "__kt_parse_color",
 
 		"container":  "__kt_abort",
 		"kubeconfig": "__kt_abort",
