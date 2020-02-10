@@ -9,6 +9,7 @@ import (
 
 	"github.com/knight42/kt/pkg/completion"
 	"github.com/knight42/kt/pkg/log"
+	"github.com/knight42/kt/pkg/version"
 )
 
 // Usage:
@@ -24,13 +25,20 @@ func checkError(err error) {
 }
 
 func main() {
-	var shell string
+	var (
+		shell        string
+		printVersion bool
+	)
 
 	o := Options{}
 	f := genericclioptions.NewConfigFlags(true)
 	cmd := &cobra.Command{
 		Use: "kt (NAME_REGEXP | TYPE NAME) [-c CONTAINER] [options]",
 		Run: func(cmd *cobra.Command, args []string) {
+			if printVersion {
+				checkError(version.Run())
+				return
+			}
 			if len(shell) > 0 {
 				checkError(completion.Generate(cmd, shell))
 				return
@@ -49,6 +57,8 @@ func main() {
 	flags.StringVarP(f.APIServer, "server", "s", *f.APIServer, "The address and port of the Kubernetes API server")
 
 	flags.StringVar(&shell, "completion", "", "Print completion script. One of: bash|zsh.")
+	flags.BoolVarP(&printVersion, "version", "V", false, "Print version and exit.")
+
 	flags.StringVarP(&o.selector, "selector", "l", o.selector, "Selector (label query) to filter on pods.")
 	flags.StringVarP(&o.container, "container", "c", o.container, "Print the logs of this container")
 	flags.Int64Var(&o.tail, "tail", o.tail, "Lines of recent log file to display. Defaults to 0 with no selector, showing all log lines otherwise 10, if a selector is provided.")
