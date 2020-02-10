@@ -1,7 +1,17 @@
-# kt
+# kt ![](https://github.com/knight42/kt/workflows/Cross%20Platform%20Build/badge.svg)
 
 kt is short for Kubernetes Tail. It behaves like `kubect logs -f` and
-its syntax is similar to `kubectl get`.
+its usage is similar to `kubectl get`.
+
+# Table of Contents
+
+* [0. Features](#0-features)
+* [1. Usage](#1-usage)
+    * [1.1 Install bash/zsh completion](#11-install-bashzsh-completion)
+    * [1.2 Filter pods by name or regexp](#12-filter-pods-by-name-or-regexp)
+    * [1.3 Filter pods by labels](#13-filter-pods-by-labels)
+    * [1.4 Tails pods belong to a higher level object](#14-tails-pods-belong-to-a-higher-level-object)
+* [2. Installtion](#2-installtion)
 
 # 0. Features
 
@@ -74,3 +84,11 @@ $ kt --tail 10 rs foo
 ```
 
 # 2. Installtion
+
+Using Homebrew:
+```
+$ brew tap knight42/tap
+$ brew install knight42/tap/kt
+```
+
+Or download from the [release page](https://github.com/knight42/kt/releases).
