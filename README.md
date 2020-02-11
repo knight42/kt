@@ -60,27 +60,25 @@ Currently only the following resources are supported:
 * Deployment
 * StatefulSet
 * DaemonSet
+* HPA
 * Job
 * ReplicaSet
 * ReplicationController
 * Cronjob(partially supported. You must specify labels in the pod template.)
 
-TODO:
-* HPA
-
 ```
+$ kt hpa foo
+
 # You could limit which containers are tailed using regexp
-$ kt --tail 10 -c 'sidecar-\w' svc foo
+$ kt -c 'sidecar-\w' svc foo
 
-$ kt -n test --tail 10 deploy foo
+$ kt -n test --tail 30 deploy foo
 
-$ kt --tail 10 --timestamps sts foo
+$ kt --timestamps sts foo
 
-$ kt --context prod --tail 10 ds foo
+$ kt --context prod ds foo
 
-$ kt --cluster dev --tail 10 job foo
-
-$ kt --tail 10 rs foo
+$ kt --cluster dev job foo
 ```
 
 # 2. Installtion
