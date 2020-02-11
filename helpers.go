@@ -15,6 +15,10 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/resource"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 func isPod(obj runtime.Object) bool {
@@ -33,7 +37,14 @@ func parseRFC3339(s string) (metav1.Time, error) {
 	return metav1.Time{Time: t}, nil
 }
 
-func getPodsSelector(obj runtime.Object) (map[string]string, error) {
+func getMatchLabels(selector *metav1.LabelSelector) (map[string]string, error) {
+	if selector == nil {
+		return nil, fmt.Errorf("nil labelSelector")
+	}
+	return selector.MatchLabels, nil
+}
+
+func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (map[string]string, error) {
 	switch t := obj.(type) {
 	// Service
 	case *corev1.Service:
@@ -41,33 +52,33 @@ func getPodsSelector(obj runtime.Object) (map[string]string, error) {
 
 	// Deployment
 	case *extensionsv1beta1.Deployment:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	case *appsv1.Deployment:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	case *appsv1beta1.Deployment:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	case *appsv1beta2.Deployment:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 
 	// DaemonSet
 	case *extensionsv1beta1.DaemonSet:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	case *appsv1beta2.DaemonSet:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	case *appsv1.DaemonSet:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 
 	// StatefulSet
 	case *appsv1.StatefulSet:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	case *appsv1beta1.StatefulSet:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	case *appsv1beta2.StatefulSet:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 
 	// Job
 	case *batchv1.Job:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 
 	// CronJob
 	case *batchv1beta1.CronJob:
@@ -75,8 +86,35 @@ func getPodsSelector(obj runtime.Object) (map[string]string, error) {
 	case *batchv2alpha1.CronJob:
 		return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
 
-	// FIXME
+	// HPA
 	case *autoscalingv1.HorizontalPodAutoscaler:
+		ref := t.Spec.ScaleTargetRef
+		gv, err := schema.ParseGroupVersion(ref.APIVersion)
+		if err != nil {
+			return nil, err
+		}
+		gvk := gv.WithKind(ref.Kind)
+		mapper, err := f.ToRESTMapper()
+		if err != nil {
+			return nil, err
+		}
+		mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+		if err != nil {
+			return nil, err
+		}
+		result := newBuilder(f).
+			ResourceNames(mapping.Resource.Resource, ref.Name).SingleResourceType().
+			NamespaceParam(t.Namespace).
+			RequireObject(true).
+			Latest().Do()
+		if err := result.Err(); err != nil {
+			return nil, err
+		}
+		refObj, err := result.Object()
+		if err != nil {
+			return nil, err
+		}
+		return getPodsSelector(refObj, f)
 
 	// Deprecated ReplicationController
 	case *corev1.ReplicationController:
@@ -84,9 +122,13 @@ func getPodsSelector(obj runtime.Object) (map[string]string, error) {
 
 	// ReplicaSet
 	case *appsv1.ReplicaSet:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	case *extensionsv1beta1.ReplicaSet:
-		return t.Spec.Selector.MatchLabels, nil
+		return getMatchLabels(t.Spec.Selector)
 	}
 	return nil, fmt.Errorf("unknown object: %#v", obj)
+}
+
+func newBuilder(f genericclioptions.RESTClientGetter) *resource.Builder {
+	return resource.NewBuilder(f).WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...)
 }

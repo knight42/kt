@@ -10,8 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/cli-runtime/pkg/resource"
-	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/knight42/kt/pkg/controller"
 )
@@ -80,12 +78,11 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 		if len(o.selector) > 0 {
 			return fmt.Errorf("label selector cannot be used here")
 		}
-		result := resource.NewBuilder(getter).
-			WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
+		result := newBuilder(getter).
 			NamespaceParam(o.namespace).DefaultNamespace().
 			Latest().
-			ResourceNames(args[0], args[1]).
-			SingleResourceType().
+			ResourceNames(args[0], args[1]).SingleResourceType().
+			RequireObject(true).
 			Do()
 		if err := result.Err(); err != nil {
 			return err
@@ -99,16 +96,13 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 			o.podNamePattern, _ = regexp.Compile(name)
 			o.mode = modeByNameRegex
 		} else {
-			selector, err := getPodsSelector(obj)
+			selector, err := getPodsSelector(obj, getter)
 			if err != nil {
 				return err
 			}
 			o.selector = labels.FormatLabels(selector)
 			o.mode = modeByLabels
 		}
-	}
-	if o.mode == modeByLabels && o.tail == 0 {
-		o.tail = 10
 	}
 	return nil
 }

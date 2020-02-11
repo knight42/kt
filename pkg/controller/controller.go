@@ -92,6 +92,7 @@ func (c *Controller) Run() error {
 		WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
 		NamespaceParam(c.namespace).DefaultNamespace().
 		ResourceTypes("pods").SingleResourceType().
+		RequireObject(true).
 		Flatten().Latest()
 	if byName {
 		result = builder.SelectAllParam(true).Do()

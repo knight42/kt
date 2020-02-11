@@ -59,11 +59,11 @@ func main() {
 	flags.StringVar(&shell, "completion", "", "Print completion script. One of: bash|zsh.")
 	flags.BoolVarP(&printVersion, "version", "V", false, "Print version and exit.")
 
-	flags.StringVarP(&o.selector, "selector", "l", o.selector, "Selector (label query) to filter on pods.")
-	flags.StringVarP(&o.container, "container", "c", o.container, "Print the logs of this container")
-	flags.Int64Var(&o.tail, "tail", o.tail, "Lines of recent log file to display. Defaults to 0 with no selector, showing all log lines otherwise 10, if a selector is provided.")
+	flags.StringVarP(&o.selector, "selector", "l", o.selector, "Selector (label query) to filter on pods, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
+	flags.StringVarP(&o.container, "container", "c", o.container, "Regular expression to match container names.")
+	flags.Int64Var(&o.tail, "tail", 10, "Lines of recent log file to display. Defaults to 10. If set to 0 it will return all logs.")
 	flags.BoolVar(&o.timestamps, "timestamps", o.timestamps, "Include timestamps on each line in the log output")
-	flags.StringVar(&o.sinceTime, "since-time", o.sinceTime, "Only return logs after a specific date (RFC3339). Defaults to all logs. Only one of since-time / since may be used.")
+	flags.StringVar(&o.sinceTime, "since-time", o.sinceTime, "Only return logs after a specific date (RFC3339). Only one of since-time / since may be used.")
 	flags.StringVar(&o.color, "color", "auto", "Colorize the output. One of: auto|always|never")
 	flags.DurationVar(&o.sinceSeconds, "since", o.sinceSeconds, "Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs. Only one of since-time / since may be used.")
 
