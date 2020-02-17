@@ -1,166 +1,41 @@
 name: Cross Platform Build
 on: [push, pull_request]
 jobs:
-  test:
-    name: Test
-    strategy:
-      matrix:
-        platform: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.platform }}
+  build:
+    name: Build
+    runs-on: ubuntu-latest
     steps:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
       id: checkout
 
-    - name: Set up Go 1.13
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
         go-version: 1.13
 
-    - uses: actions/cache@v1
+    - name: Cache go module
+      uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Test
+    - name: Get dependencies and run test
       run: |
         go test -race ./...
 
-  build:
-    name: Build
-    needs: [test]
-    if: startsWith(github.ref, 'refs/tags/v')
-    strategy:
-      matrix:
-        platform: [ubuntu-latest, macos-latest]
-        include:
-        - platform: ubuntu-latest
-          OS: linux
-        - platform: macos-latest
-          OS: darwin
-    runs-on: ${{ matrix.platform }}
-    steps:
-
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
-      id: checkout
-
-    - name: Set up Go 1.13
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.13
-
-    - uses: actions/cache@v1
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
-    - name: Get the version (git tag)
-      id: get_version
-      run: |
-        echo ::set-env name=VERSION::${GITHUB_REF#refs/tags/}
-
     - name: Build
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/}
-        CGO_ENABLED=0 go build -trimpath -o kt -ldflags \
-          "-s -X github.com/knight42/kt/pkg/version.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
-          -X github.com/knight42/kt/pkg/version.GitCommit=${GITHUB_SHA} \
-          -X github.com/knight42/kt/pkg/version.Version=${VERSION}"
+      if: startsWith(github.ref, 'refs/tags/')
+      run: make -j releases
 
-    # The build artifact can be identified by the trailing sha of the git commit
-    - name: Stash the build artifact
-      uses: actions/upload-artifact@v1
-      with:
-        name: kt-${{ matrix.OS }}-amd64-${{ github.sha }}
-        path: ./kt
-
-  # A Github release is created whenever the git reference contains a tag, starting with 'v*' (e.g. v0.4.2)
-  # And the previous build jobs have been successful
-  create_release:
-    runs-on: ubuntu-18.04
-    needs: [build]
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1.0.0
+    - name: Upload Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
+        files: kt-v*
+        draft: true
         prerelease: false
-    # since jobs can not share any variables we have to copy the URL of the created Github release
-    # into a file and stash it as an artifact
-    - name: Copy release URL into file
-      run: |
-        printf "%s" "${{ steps.create_release.outputs.upload_url }}" > release-url.txt
-    - name: Stash file containing the release URL as an artifact
-      uses: actions/upload-artifact@v1
-      with:
-        name: release-url
-        path: ./release-url.txt
-
-  # In this job we upload the release artifacts to the corresponding release
-  upload:
-    runs-on: ubuntu-18.04
-    needs: create_release # release must be created before this job can start
-    strategy:
-      matrix:
-        OS: ['linux', 'darwin']
-    steps:
-    # Since Github actions (currently) doesn't provide a slugged version of the git tag we have to
-    # create it by ourselves. It is then made available to other steps in this job as a step.outputs
-    # variable
-    - name: Get the version (git tag)
-      id: get_version
-      run: |
-        echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
-    - name: Retrieve stashed intermediary build artifact
-      uses: actions/download-artifact@v1
-      with:
-        name: kt-${{ matrix.OS }}-amd64-${{ github.sha }}
-    # rename the retrieved intermediary artifact and prepare zip file
-    - name: Prepare release artifact
-      env:
-        VERSION: ${{ steps.get_version.outputs.VERSION }}
-      run: |
-        mkdir kt-$VERSION-${{ matrix.OS }}-amd64
-        mv kt-${{ matrix.OS }}-amd64-${{ github.sha }}/kt kt-$VERSION-${{ matrix.OS }}-amd64/kt
-        chmod +x kt-$VERSION-${{ matrix.OS }}-amd64/kt
-        tar czf kt-$VERSION-${{ matrix.OS }}-amd64.tar.gz kt-$VERSION-${{ matrix.OS }}-amd64
-    # Download the previously uploaded artifact which contains the release URL
-    - name: Retrieve stashed release URL
-      uses: actions/download-artifact@v1
-      with:
-        name: release-url
-    # Write content of downloaded file (a string which contains the release URL) into a step.outputs variable
-    - name: Read release URL
-      id: get_release_url
-      run: |
-        echo ::set-output name=URL::$(cat release-url/release-url.txt)
-    # This step is only needed because the upload-release-asset currently doesn't support
-    # environment variables. Therefore they must be written and referenced through step.outputs
-    - name: Prepare artifact metadata
-      id: prepare_artifact_metadata
-      env:
-        VERSION: ${{ steps.get_version.outputs.VERSION }}
-      run: |
-        echo ::set-output name=ARTIFACT_PATH::./kt-$VERSION-${{ matrix.OS }}-amd64.tar.gz
-        echo ::set-output name=ARTIFACT_NAME::kt-$VERSION-${{ matrix.OS }}-amd64.tar.gz
-    # Finally upload the artifact to the corresponding release
-    - name: Upload Release Artifact ${{ steps.get_version.outputs.VERSION }}
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.get_release_url.outputs.URL }}
-        asset_path: ${{ steps.prepare_artifact_metadata.outputs.ARTIFACT_PATH }}
-        asset_name: ${{ steps.prepare_artifact_metadata.outputs.ARTIFACT_NAME }}
-        asset_content_type: application/gzip
