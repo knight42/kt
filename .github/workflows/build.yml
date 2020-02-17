@@ -37,5 +37,5 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         files: kt-v*
-        draft: true
+        draft: false
         prerelease: false
