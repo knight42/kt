@@ -6,6 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
 	"github.com/knight42/kt/pkg/completion"
 	"github.com/knight42/kt/pkg/log"
@@ -34,6 +37,18 @@ func main() {
 	f := genericclioptions.NewConfigFlags(true)
 	cmd := &cobra.Command{
 		Use: "kt (NAME_REGEXP | TYPE NAME) [-c CONTAINER] [options]",
+		Example: ` # Begin streaming the logs from all containers in pods belong to Service foo
+ kt svc foo
+
+ # Begin streaming the logs from all containers in pods belong to Deployment bar in the last hour
+ kt --since=1h deploy bar
+
+ # Begin streaming the logs from container nginx-1 in pods belong to Deployment nginx
+ kt -c nginx-1 deployment nginx
+
+ # Filter pods by name or regexp
+ kt 'foo'
+ kt 'foo-\w+'`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if printVersion {
 				checkError(version.Run())
