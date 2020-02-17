@@ -105,30 +105,6 @@ func (c *Controller) Run() error {
 		return err
 	}
 
-	infos, err := result.Infos()
-	if err != nil {
-		return err
-	}
-	if len(infos) == 0 {
-		return fmt.Errorf("no matched pods found")
-	}
-	if byName {
-		found := false
-		for _, info := range infos {
-			pod, ok := info.Object.(*corev1.Pod)
-			if !ok {
-				continue
-			}
-			if c.podNameRegex.MatchString(pod.Name) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("no matched pods found")
-		}
-	}
-
 	watcher, err := result.Watch("")
 	if err != nil {
 		return err
