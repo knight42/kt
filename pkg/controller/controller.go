@@ -21,11 +21,12 @@ import (
 )
 
 type Controller struct {
-	f           genericclioptions.RESTClientGetter
-	kubeClient  kubernetes.Interface
-	namespace   string
-	color       string
-	logsOptions *corev1.PodLogOptions
+	f            genericclioptions.RESTClientGetter
+	kubeClient   kubernetes.Interface
+	namespace    string
+	color        string
+	exitWithPods bool
+	logsOptions  *corev1.PodLogOptions
 
 	enableColor bool
 
@@ -129,6 +130,9 @@ func (c *Controller) Run() error {
 		case watch.Deleted:
 			log.Errorf("- [%s] pod deleted", pod.Name)
 			c.onPodDeleted(pod)
+			if c.exitWithPods && len(c.podsTailer) == 0 {
+				return nil
+			}
 		}
 	}
 	return nil

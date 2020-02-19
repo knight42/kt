@@ -78,6 +78,7 @@ func main() {
 	flags.StringVarP(&o.container, "container", "c", o.container, "Regular expression to match container names.")
 	flags.Int64Var(&o.tail, "tail", 10, "Lines of recent log file to display. Defaults to 10. If set to 0 it will return all logs.")
 	flags.BoolVar(&o.timestamps, "timestamps", o.timestamps, "Include timestamps on each line in the log output")
+	flags.BoolVar(&o.exitWithPods, "exit-with-pods", false, "Exit if all watched pods are deleted")
 	flags.StringVar(&o.sinceTime, "since-time", o.sinceTime, "Only return logs after a specific date (RFC3339). Only one of since-time / since may be used.")
 	flags.StringVar(&o.color, "color", "auto", "Colorize the output. One of: auto|always|never")
 	flags.DurationVar(&o.sinceSeconds, "since", o.sinceSeconds, "Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs. Only one of since-time / since may be used.")

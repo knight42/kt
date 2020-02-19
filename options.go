@@ -25,6 +25,7 @@ type Options struct {
 	sinceSeconds time.Duration
 	sinceTime    string
 	timestamps   bool
+	exitWithPods bool
 	tail         int64
 	container    string
 
@@ -112,7 +113,10 @@ func (o *Options) Run(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	opts := []controller.Option{controller.WithColor(o.color)}
+	opts := []controller.Option{
+		controller.WithColor(o.color),
+		controller.EnableExitWithPods(o.exitWithPods),
+	}
 	switch o.mode {
 	case modeByLabels:
 		opts = append(opts, controller.WithPodLabelsSelector(o.selector))
