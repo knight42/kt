@@ -15,8 +15,8 @@ its usage is similar to `kubectl get`.
 
 # 0. Features
 
-* Tails all containers in a pod by default.
-* Automatically tails new pods, discard deleted pods and retries if pod
+* Tail all containers in a pod by default.
+* Automatically tail new pods, discard deleted pods and retry if the pod
 switches to running phase from pending phase.
 * Recover from containers restart.
 * Auto completion.
@@ -53,7 +53,7 @@ $ kt 'foo-\w+'
 $ kt -n prod -lapp=foo
 ```
 
-#### 1.4 Tails pods belong to a higher level object
+#### 1.4 Tail pods belong to a higher level object
 
 Currently only the following resources are supported:
 * Service
