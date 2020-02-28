@@ -8,6 +8,8 @@ import (
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
@@ -42,6 +44,38 @@ func getMatchLabels(selector *metav1.LabelSelector) (map[string]string, error) {
 		return nil, fmt.Errorf("nil labelSelector")
 	}
 	return selector.MatchLabels, nil
+}
+
+type objectReference struct {
+	APIVersion string
+	Kind       string
+	Name       string
+	Namespace  string
+}
+
+func getRefObj(ref objectReference, f genericclioptions.RESTClientGetter) (runtime.Object, error) {
+	gv, err := schema.ParseGroupVersion(ref.APIVersion)
+	if err != nil {
+		return nil, err
+	}
+	gvk := gv.WithKind(ref.Kind)
+	mapper, err := f.ToRESTMapper()
+	if err != nil {
+		return nil, err
+	}
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, err
+	}
+	result := newBuilder(f).
+		ResourceNames(mapping.Resource.Resource, ref.Name).SingleResourceType().
+		NamespaceParam(ref.Namespace).
+		RequireObject(true).
+		Latest().Do()
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
+	return result.Object()
 }
 
 func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (map[string]string, error) {
@@ -89,28 +123,36 @@ func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (
 	// HPA
 	case *autoscalingv1.HorizontalPodAutoscaler:
 		ref := t.Spec.ScaleTargetRef
-		gv, err := schema.ParseGroupVersion(ref.APIVersion)
+		refObj, err := getRefObj(objectReference{
+			APIVersion: ref.APIVersion,
+			Kind:       ref.Kind,
+			Name:       ref.Name,
+			Namespace:  t.Namespace,
+		}, f)
 		if err != nil {
 			return nil, err
 		}
-		gvk := gv.WithKind(ref.Kind)
-		mapper, err := f.ToRESTMapper()
+		return getPodsSelector(refObj, f)
+	case *autoscalingv2beta1.HorizontalPodAutoscaler:
+		ref := t.Spec.ScaleTargetRef
+		refObj, err := getRefObj(objectReference{
+			APIVersion: ref.APIVersion,
+			Kind:       ref.Kind,
+			Name:       ref.Name,
+			Namespace:  t.Namespace,
+		}, f)
 		if err != nil {
 			return nil, err
 		}
-		mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-		if err != nil {
-			return nil, err
-		}
-		result := newBuilder(f).
-			ResourceNames(mapping.Resource.Resource, ref.Name).SingleResourceType().
-			NamespaceParam(t.Namespace).
-			RequireObject(true).
-			Latest().Do()
-		if err := result.Err(); err != nil {
-			return nil, err
-		}
-		refObj, err := result.Object()
+		return getPodsSelector(refObj, f)
+	case *autoscalingv2beta2.HorizontalPodAutoscaler:
+		ref := t.Spec.ScaleTargetRef
+		refObj, err := getRefObj(objectReference{
+			APIVersion: ref.APIVersion,
+			Kind:       ref.Kind,
+			Name:       ref.Name,
+			Namespace:  t.Namespace,
+		}, f)
 		if err != nil {
 			return nil, err
 		}
