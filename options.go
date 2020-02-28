@@ -128,6 +128,7 @@ func (o *Options) toLogsOptions() (corev1.PodLogOptions, error) {
 	opt := corev1.PodLogOptions{
 		Follow:     !o.previous,
 		Timestamps: o.timestamps,
+		Previous:   o.previous,
 	}
 	if len(o.sinceTime) > 0 {
 		t, err := parseRFC3339(o.sinceTime)
