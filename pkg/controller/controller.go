@@ -69,7 +69,7 @@ func (c *Controller) Run() error {
 	case "never":
 		c.enableColor = false
 	default:
-		return fmt.Errorf("unkown value of flag `color`: %s", c.color)
+		return fmt.Errorf("unknown value of flag `color`: %s", c.color)
 	}
 
 	byName := c.podNameRegex != nil
@@ -106,6 +106,23 @@ func (c *Controller) Run() error {
 		return err
 	}
 
+	if c.logsOptions.Previous {
+		err := result.Visit(func(info *resource.Info, err error) error {
+			pod, ok := info.Object.(*corev1.Pod)
+			if !ok {
+				return nil
+			}
+			if byName && !c.podNameRegex.MatchString(pod.Name) {
+				return nil
+			}
+			log.Errorf("+ [%s] pod added", pod.Name)
+			c.onPodAdded(pod)
+			c.podsTailer[pod.UID].TailSync()
+			return nil
+		})
+		return err
+	}
+
 	watcher, err := result.Watch("")
 	if err != nil {
 		return err
@@ -124,6 +141,7 @@ func (c *Controller) Run() error {
 		case watch.Added:
 			log.Errorf("+ [%s] pod added", pod.Name)
 			c.onPodAdded(pod)
+			c.podsTailer[pod.UID].Tail()
 		case watch.Modified:
 			log.V(4).Infof(">>>>> [DEBUG] pod modified: %s", pod.Name)
 			c.onPodModified(pod)
@@ -144,7 +162,7 @@ func (c *Controller) onPodAdded(pod *corev1.Pod) {
 	if len(names) == 0 {
 		return
 	}
-	t := tailer.New(
+	c.podsTailer[pod.UID] = tailer.New(
 		c.namespace, pod.Name,
 		names,
 		c.enableColor,
@@ -152,8 +170,6 @@ func (c *Controller) onPodAdded(pod *corev1.Pod) {
 		c.logsOptions,
 		c.logCh,
 	)
-	t.Tail()
-	c.podsTailer[pod.UID] = t
 }
 
 func (c *Controller) onPodModified(pod *corev1.Pod) {
@@ -161,12 +177,7 @@ func (c *Controller) onPodModified(pod *corev1.Pod) {
 	if !ok {
 		return
 	}
-	names := getRetryableContainerNames(pod)
-	log.V(4).Infof(">>>>> [DEBUG] modified pod: %s, retryable containers: %v", pod.Name, names)
-	if len(names) == 0 {
-		return
-	}
-	t.RetryContainers(names)
+	t.RetryContainers(getRetryableContainerNames(pod))
 }
 
 func (c *Controller) onPodDeleted(pod *corev1.Pod) {

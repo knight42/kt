@@ -24,6 +24,7 @@ type Options struct {
 	selector     string
 	sinceSeconds time.Duration
 	sinceTime    string
+	previous     bool
 	timestamps   bool
 	exitWithPods bool
 	tail         int64
@@ -57,7 +58,7 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 	switch o.color {
 	case "auto", "always", "never":
 	default:
-		return fmt.Errorf("unkown value of flag `color`: %s", o.color)
+		return fmt.Errorf("unknown value of flag `color`: %s", o.color)
 	}
 
 	switch len(args) {
@@ -113,26 +114,19 @@ func (o *Options) Run(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	opts := []controller.Option{
+	c := controller.New(o.restClientGetter, &logsOptions,
 		controller.WithColor(o.color),
+		controller.WithPodLabelsSelector(o.selector),
+		controller.WithPodNameRegexp(o.podNamePattern),
+		controller.WithContainerNameRegexp(o.containerNamePattern),
 		controller.EnableExitWithPods(o.exitWithPods),
-	}
-	switch o.mode {
-	case modeByLabels:
-		opts = append(opts, controller.WithPodLabelsSelector(o.selector))
-	case modeByNameRegex:
-		opts = append(opts, controller.WithPodNameRegexp(o.podNamePattern))
-	}
-	if len(o.container) > 0 {
-		opts = append(opts, controller.WithContainerNameRegexp(o.containerNamePattern))
-	}
-	c := controller.New(o.restClientGetter, &logsOptions, opts...)
+	)
 	return c.Run()
 }
 
 func (o *Options) toLogsOptions() (corev1.PodLogOptions, error) {
 	opt := corev1.PodLogOptions{
-		Follow:     true,
+		Follow:     !o.previous,
 		Timestamps: o.timestamps,
 	}
 	if len(o.sinceTime) > 0 {

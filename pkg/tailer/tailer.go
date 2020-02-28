@@ -4,26 +4,18 @@ import (
 	"bufio"
 	"context"
 	"io"
-	"time"
 
 	"github.com/fatih/color"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/knight42/kt/pkg/api"
 	"github.com/knight42/kt/pkg/log"
 )
 
-type Task struct {
-	Job    func()
-	Cancel context.CancelFunc
-}
-
 type Tailer interface {
 	Tail()
+	TailSync()
 	RetryContainers(names []string)
 	Close()
 }
@@ -51,7 +43,7 @@ func New(
 
 		rootCtx:  rootCtx,
 		cancel:   cancel,
-		tasks:    make(map[string]Task),
+		tasks:    make(map[string]*Task),
 		podColor: podColor,
 		ctColor:  ctColor,
 	}
@@ -67,7 +59,7 @@ type tailer struct {
 
 	rootCtx context.Context
 	cancel  context.CancelFunc
-	tasks   map[string]Task
+	tasks   map[string]*Task
 
 	podColor, ctColor *color.Color
 }
@@ -77,6 +69,12 @@ func (t *tailer) Tail() {
 		k := t.newTask(ct)
 		t.tasks[ct] = k
 		go k.Job()
+	}
+}
+
+func (t *tailer) TailSync() {
+	for ct := range t.ctNames {
+		t.newTask(ct).Job()
 	}
 }
 
@@ -114,15 +112,27 @@ func (t *tailer) fetchLog(ctx context.Context, container string) error {
 }
 
 func (t *tailer) RetryContainers(names []string) {
+	if len(names) == 0 {
+		return
+	}
+	var retried []string
 	for _, name := range names {
 		tsk, ok := t.tasks[name]
 		if !ok {
 			continue
 		}
+		log.V(5).Infof(">>>>> [DEBUG] [%s/%s] retrying, completed: %v", t.podName, name, tsk.Completed)
+		if !tsk.Completed {
+			continue
+		}
+		retried = append(retried, name)
 		tsk.Cancel()
 		newTask := t.newTask(name)
 		t.tasks[name] = newTask
 		go newTask.Job()
+	}
+	if len(retried) > 0 {
+		log.V(5).Infof(">>>>> [DEBUG] modified pod: %s, retryable containers: %v", t.podName, retried)
 	}
 }
 
@@ -130,23 +140,18 @@ func (t *tailer) Close() {
 	t.cancel()
 }
 
-func (t *tailer) newTask(ct string) Task {
+func (t *tailer) newTask(ct string) *Task {
 	ctx, cancel := context.WithCancel(t.rootCtx)
-	job := func() {
-		err := retry.OnError(wait.Backoff{
-			Duration: time.Second * 5,
-			Factor:   2.0,
-			Jitter:   0.1,
-			Steps:    5,
-		}, errors.IsBadRequest, func() error {
-			return t.fetchLog(ctx, ct)
-		})
+	task := &Task{
+		Cancel: cancel,
+	}
+	task.Job = func() {
+		err := t.fetchLog(ctx, ct)
+		task.Completed = true
+		log.V(5).Infof(">>>>> [DEBUG] [%s/%s] completed", t.podName, ct)
 		if err != nil {
 			log.V(3).Infof(">>>>> [ERROR] [%s/%s] tail: %v", t.podName, ct, err)
 		}
 	}
-	return Task{
-		Job:    job,
-		Cancel: cancel,
-	}
+	return task
 }
