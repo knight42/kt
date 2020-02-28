@@ -29,3 +29,9 @@ func WithColor(when string) Option {
 		t.color = when
 	}
 }
+
+func EnableExitWithPods(enable bool) Option {
+	return func(t *Controller) {
+		t.exitWithPods = enable
+	}
+}
