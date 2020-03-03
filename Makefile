@@ -2,10 +2,11 @@ NAME ?= kt
 VERSION ?= $(shell git describe --tags || echo "unknown")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 GIT_COMMIT := $(shell git rev-parse HEAD)
-GOBUILD=CGO_ENABLED=0 go build -ldflags '-X "github.com/knight42/kt/pkg/version.Version=$(VERSION)" \
+GO_LDFLAGS ?= '-X "github.com/knight42/kt/pkg/version.Version=$(VERSION)" \
 		-X "github.com/knight42/kt/pkg/version.BuildDate=$(BUILD_DATE)" \
 		-X "github.com/knight42/kt/pkg/version.GitCommit=$(GIT_COMMIT)" \
 		-w -s'
+GOBUILD=CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS)
 
 PLATFORM_LIST = \
 	darwin-amd64 \
@@ -28,10 +29,7 @@ windows-amd64:
 all-arch: $(PLATFORM_LIST) $(WINDOWS_ARCH_LIST)
 
 install:
-	CGO_ENABLED=0 go install -ldflags '-X "github.com/knight42/kt/pkg/version.Version=$(VERSION)" \
-		-X "github.com/knight42/kt/pkg/version.BuildDate=$(BUILD_DATE)" \
-		-X "github.com/knight42/kt/pkg/version.GitCommit=$(GIT_COMMIT)" \
-		-w -s'
+	CGO_ENABLED=0 go install -ldflags $(GO_LDFLAGS)
 
 gz_releases=$(addsuffix .tar.gz, $(PLATFORM_LIST))
 zip_releases=$(addsuffix .zip, $(WINDOWS_ARCH_LIST))
