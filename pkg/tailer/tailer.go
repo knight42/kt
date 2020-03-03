@@ -112,9 +112,6 @@ func (t *tailer) fetchLog(ctx context.Context, container string) error {
 }
 
 func (t *tailer) RetryContainers(names []string) {
-	if len(names) == 0 {
-		return
-	}
 	var retried []string
 	for _, name := range names {
 		tsk, ok := t.tasks[name]

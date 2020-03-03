@@ -10,9 +10,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
-	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,11 +19,6 @@ import (
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes/scheme"
 )
-
-func isPod(obj runtime.Object) bool {
-	_, ok := obj.(*corev1.Pod)
-	return ok
-}
 
 func parseRFC3339(s string) (metav1.Time, error) {
 	if t, timeErr := time.Parse(time.RFC3339Nano, s); timeErr == nil {
@@ -71,7 +63,7 @@ func getRefObj(ref objectReference, f genericclioptions.RESTClientGetter) (runti
 		ResourceNames(mapping.Resource.Resource, ref.Name).SingleResourceType().
 		NamespaceParam(ref.Namespace).
 		RequireObject(true).
-		Latest().Do()
+		Do()
 	if err := result.Err(); err != nil {
 		return nil, err
 	}
@@ -111,14 +103,14 @@ func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (
 		return getMatchLabels(t.Spec.Selector)
 
 	// Job
-	case *batchv1.Job:
-		return getMatchLabels(t.Spec.Selector)
+	// case *batchv1.Job:
+	// 	return getMatchLabels(t.Spec.Selector)
 
 	// CronJob
-	case *batchv1beta1.CronJob:
-		return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
-	case *batchv2alpha1.CronJob:
-		return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
+	// case *batchv1beta1.CronJob:
+	// 	return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
+	// case *batchv2alpha1.CronJob:
+	// 	return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
 
 	// HPA
 	case *autoscalingv1.HorizontalPodAutoscaler:
@@ -173,4 +165,11 @@ func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (
 
 func newBuilder(f genericclioptions.RESTClientGetter) *resource.Builder {
 	return resource.NewBuilder(f).WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...)
+}
+
+func formatGroupResources(gvr schema.GroupVersionResource) string {
+	if len(gvr.Group) == 0 {
+		return gvr.Resource
+	}
+	return gvr.Group + "/" + gvr.Resource
 }

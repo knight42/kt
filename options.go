@@ -7,16 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/resource"
 
 	"github.com/knight42/kt/pkg/controller"
-)
-
-const (
-	modeByNameRegex uint8 = iota
-	modeByLabels
 )
 
 type Options struct {
@@ -32,7 +27,6 @@ type Options struct {
 
 	restClientGetter genericclioptions.RESTClientGetter
 
-	mode      uint8
 	namespace string
 
 	podNamePattern       *regexp.Regexp
@@ -66,7 +60,6 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 		if len(o.selector) == 0 {
 			return fmt.Errorf("empty selector")
 		}
-		o.mode = modeByLabels
 	case 1:
 		if len(o.selector) > 0 {
 			return fmt.Errorf("label selector cannot be used here")
@@ -75,36 +68,43 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 		if err != nil {
 			return err
 		}
-		o.mode = modeByNameRegex
 	case 2:
 		if len(o.selector) > 0 {
 			return fmt.Errorf("label selector cannot be used here")
 		}
 		result := newBuilder(getter).
 			NamespaceParam(o.namespace).DefaultNamespace().
-			Latest().
 			ResourceNames(args[0], args[1]).SingleResourceType().
 			RequireObject(true).
 			Do()
 		if err := result.Err(); err != nil {
 			return err
 		}
-		obj, err := result.Object()
-		if err != nil {
-			return err
-		}
-		if isPod(obj) {
-			name, _ := meta.NewAccessor().Name(obj)
-			o.podNamePattern, _ = regexp.Compile(name)
-			o.mode = modeByNameRegex
-		} else {
-			selector, err := getPodsSelector(obj, getter)
-			if err != nil {
-				return err
+
+		return result.Visit(func(info *resource.Info, e error) error {
+			if e != nil {
+				return e
 			}
-			o.selector = labels.FormatLabels(selector)
-			o.mode = modeByLabels
-		}
+			gr := formatGroupResources(info.Mapping.Resource)
+			objName := info.Name
+			switch gr {
+			case "pods":
+				o.podNamePattern = regexp.MustCompile("^" + objName + "$")
+			case "batch/jobs":
+				o.podNamePattern = regexp.MustCompile(fmt.Sprintf(`^%s-\w+$`, objName))
+			case "batch/cronjobs":
+				o.podNamePattern = regexp.MustCompile(fmt.Sprintf(`^%s-\d+-\w+$`, objName))
+
+			default:
+				selector, err := getPodsSelector(info.Object, getter)
+				if err != nil {
+					return err
+				}
+				o.selector = labels.FormatLabels(selector)
+			}
+
+			return nil
+		})
 	}
 	return nil
 }
@@ -114,7 +114,7 @@ func (o *Options) Run(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	c := controller.New(o.restClientGetter, &logsOptions,
+	c := controller.New(o.restClientGetter, logsOptions,
 		controller.WithColor(o.color),
 		controller.WithPodLabelsSelector(o.selector),
 		controller.WithPodNameRegexp(o.podNamePattern),
@@ -124,7 +124,7 @@ func (o *Options) Run(cmd *cobra.Command) error {
 	return c.Run()
 }
 
-func (o *Options) toLogsOptions() (corev1.PodLogOptions, error) {
+func (o *Options) toLogsOptions() (*corev1.PodLogOptions, error) {
 	opt := corev1.PodLogOptions{
 		Follow:     !o.previous,
 		Timestamps: o.timestamps,
@@ -133,7 +133,7 @@ func (o *Options) toLogsOptions() (corev1.PodLogOptions, error) {
 	if len(o.sinceTime) > 0 {
 		t, err := parseRFC3339(o.sinceTime)
 		if err != nil {
-			return corev1.PodLogOptions{}, err
+			return nil, err
 		}
 		opt.SinceTime = &t
 	}
@@ -144,5 +144,5 @@ func (o *Options) toLogsOptions() (corev1.PodLogOptions, error) {
 	if o.tail > 0 {
 		opt.TailLines = &o.tail
 	}
-	return opt, nil
+	return &opt, nil
 }

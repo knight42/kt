@@ -94,7 +94,7 @@ func (c *Controller) Run() error {
 		NamespaceParam(c.namespace).DefaultNamespace().
 		ResourceTypes("pods").SingleResourceType().
 		RequireObject(true).
-		Flatten().Latest()
+		Flatten()
 	if byName {
 		result = builder.SelectAllParam(true).Do()
 	} else {
@@ -107,7 +107,7 @@ func (c *Controller) Run() error {
 	}
 
 	if c.logsOptions.Previous {
-		err := result.Visit(func(info *resource.Info, err error) error {
+		return result.Visit(func(info *resource.Info, err error) error {
 			pod, ok := info.Object.(*corev1.Pod)
 			if !ok {
 				return nil
@@ -120,7 +120,6 @@ func (c *Controller) Run() error {
 			c.podsTailer[pod.UID].TailSync()
 			return nil
 		})
-		return err
 	}
 
 	watcher, err := result.Watch("")
