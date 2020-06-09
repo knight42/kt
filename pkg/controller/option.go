@@ -35,3 +35,9 @@ func EnableExitWithPods(enable bool) Option {
 		t.exitWithPods = enable
 	}
 }
+
+func WithPrefix(enable bool) Option {
+	return func(t *Controller) {
+		t.showPrefix = enable
+	}
+}

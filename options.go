@@ -27,6 +27,7 @@ type Options struct {
 	previous     bool
 	timestamps   bool
 	exitWithPods bool
+	noPrefix     bool
 	tail         int64
 	container    string
 
@@ -120,6 +121,7 @@ func (o *Options) Run(cmd *cobra.Command) error {
 		controller.WithPodNameRegexp(o.podNamePattern),
 		controller.WithContainerNameRegexp(o.containerNamePattern),
 		controller.EnableExitWithPods(o.exitWithPods),
+		controller.WithPrefix(!o.noPrefix),
 	)
 	return c.Run()
 }
