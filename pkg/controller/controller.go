@@ -26,6 +26,7 @@ type Controller struct {
 	namespace    string
 	color        string
 	exitWithPods bool
+	showPrefix   bool
 	logsOptions  *corev1.PodLogOptions
 
 	enableColor bool
@@ -60,6 +61,7 @@ func (c *Controller) Run() error {
 	)
 
 	go c.consumeLog()
+	defer close(c.logCh)
 
 	switch c.color {
 	case "always":
@@ -192,11 +194,13 @@ func (c *Controller) onPodDeleted(pod *corev1.Pod) {
 func (c *Controller) consumeLog() {
 	w := bufio.NewWriter(os.Stdout)
 	for i := range c.logCh {
-		if i.PodColor != nil {
-			_, _ = i.PodColor.Fprint(w, i.Pod)
-			_, _ = i.ContainerColor.Fprintf(w, "[%s] ", i.Container)
-		} else {
-			_, _ = w.WriteString(i.Pod + "[" + i.Container + "] ")
+		if c.showPrefix {
+			if i.PodColor != nil {
+				_, _ = i.PodColor.Fprint(w, i.Pod)
+				_, _ = i.ContainerColor.Fprintf(w, "[%s] ", i.Container)
+			} else {
+				_, _ = w.WriteString(i.Pod + "[" + i.Container + "] ")
+			}
 		}
 		_, _ = w.Write(i.Content)
 		_ = w.Flush()

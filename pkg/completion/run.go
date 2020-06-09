@@ -101,44 +101,7 @@ __kt_get_comp_words_by_ref() {
 	cword=("${COMP_CWORD[@]}")
 }
 __kt_filedir() {
-	local RET OLD_IFS w qw
-	__kt_debug "_filedir $@ cur=$cur"
-	if [[ "$1" = \~* ]]; then
-		# somehow does not work. Maybe, zsh does not call this at all
-		eval echo "$1"
-		return 0
-	fi
-	OLD_IFS="$IFS"
-	IFS=$'\n'
-	if [ "$1" = "-d" ]; then
-		shift
-		RET=( $(compgen -d) )
-	else
-		RET=( $(compgen -f) )
-	fi
-	IFS="$OLD_IFS"
-	IFS="," __kt_debug "RET=${RET[@]} len=${#RET[@]}"
-	for w in ${RET[@]}; do
-		if [[ ! "${w}" = "${cur}"* ]]; then
-			continue
-		fi
-		if eval "[[ \"\${w}\" = *.$1 || -d \"\${w}\" ]]"; then
-			qw="$(__kt_quote "${w}")"
-			if [ -d "${w}" ]; then
-				COMPREPLY+=("${qw}/")
-			else
-				COMPREPLY+=("${qw}")
-			fi
-		fi
-	done
-}
-__kt_quote() {
-    if [[ $1 == \'* || $1 == \"* ]]; then
-        # Leave out first character
-        printf %q "${1:1}"
-    else
-	printf %q "$1"
-    fi
+	true
 }
 autoload -U +X bashcompinit && bashcompinit
 # use word boundary patterns for BSD or GNU sed

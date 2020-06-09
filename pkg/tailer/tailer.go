@@ -81,7 +81,7 @@ func (t *tailer) TailSync() {
 func (t *tailer) fetchLog(ctx context.Context, container string) error {
 	opt := t.logsOptions.DeepCopy()
 	opt.Container = container
-	stream, err := t.client.CoreV1().Pods(t.namespace).GetLogs(t.podName, opt).Stream()
+	stream, err := t.client.CoreV1().Pods(t.namespace).GetLogs(t.podName, opt).Stream(context.Background())
 	if err != nil {
 		return err
 	}
