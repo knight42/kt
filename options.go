@@ -30,6 +30,7 @@ type Options struct {
 	noPrefix     bool
 	tail         int64
 	container    string
+	nodeName     string
 
 	restClientGetter genericclioptions.RESTClientGetter
 
@@ -122,6 +123,7 @@ func (o *Options) Run(cmd *cobra.Command) error {
 		controller.WithContainerNameRegexp(o.containerNamePattern),
 		controller.EnableExitWithPods(o.exitWithPods),
 		controller.WithPrefix(!o.noPrefix),
+		controller.WithNodeName(o.nodeName),
 	)
 	return c.Run()
 }

@@ -25,6 +25,7 @@ type Controller struct {
 	kubeClient   kubernetes.Interface
 	namespace    string
 	color        string
+	nodeName     string
 	exitWithPods bool
 	showPrefix   bool
 	logsOptions  *corev1.PodLogOptions
@@ -55,11 +56,6 @@ func New(f genericclioptions.RESTClientGetter, logsOpts *corev1.PodLogOptions, o
 }
 
 func (c *Controller) Run() error {
-	var (
-		err    error
-		result *resource.Result
-	)
-
 	go c.consumeLog()
 	defer close(c.logCh)
 
@@ -74,8 +70,7 @@ func (c *Controller) Run() error {
 		return fmt.Errorf("unknown value of flag `color`: %s", c.color)
 	}
 
-	byName := c.podNameRegex != nil
-
+	var err error
 	c.namespace, _, err = c.f.ToRawKubeConfigLoader().Namespace()
 	if err != nil {
 		return err
@@ -96,17 +91,20 @@ func (c *Controller) Run() error {
 		NamespaceParam(c.namespace).DefaultNamespace().
 		ResourceTypes("pods").SingleResourceType().
 		RequireObject(true).
+		LabelSelectorParam(c.labelSelector).
 		Flatten().Latest()
-	if byName {
-		result = builder.SelectAllParam(true).Do()
+	if len(c.nodeName) > 0 {
+		builder = builder.FieldSelectorParam("spec.nodeName=" + c.nodeName)
 	} else {
-		// select pods using labels
-		result = builder.LabelSelectorParam(c.labelSelector).Do()
+		builder = builder.SelectAllParam(true)
 	}
 
+	result := builder.Do()
 	if err := result.Err(); err != nil {
 		return err
 	}
+
+	byName := c.podNameRegex != nil
 
 	if c.logsOptions.Previous {
 		err := result.Visit(func(info *resource.Info, err error) error {

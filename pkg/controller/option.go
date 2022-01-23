@@ -41,3 +41,9 @@ func WithPrefix(enable bool) Option {
 		t.showPrefix = enable
 	}
 }
+
+func WithNodeName(nodeName string) Option {
+	return func(t *Controller) {
+		t.nodeName = nodeName
+	}
+}

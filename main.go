@@ -15,11 +15,6 @@ import (
 	"github.com/knight42/kt/pkg/version"
 )
 
-// Usage:
-// kt -lapp=qwe
-// kt deploy app
-// kt 'app\w+'
-
 func checkError(err error) {
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
@@ -84,6 +79,7 @@ func main() {
 	flags.StringVar(&o.sinceTime, "since-time", o.sinceTime, "Only return logs after a specific date (RFC3339). Only one of since-time / since may be used.")
 	flags.StringVar(&o.color, "color", "auto", "Colorize the output. One of: auto|always|never")
 	flags.DurationVar(&o.sinceSeconds, "since", o.sinceSeconds, "Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs. Only one of since-time / since may be used.")
+	flags.StringVar(&o.nodeName, "node-name", "", "The name of the node that pods running on")
 
 	log.AddFlags(flags)
 
