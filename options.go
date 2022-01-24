@@ -14,11 +14,6 @@ import (
 	"github.com/knight42/kt/pkg/controller"
 )
 
-const (
-	modeByNameRegex uint8 = iota
-	modeByLabels
-)
-
 type Options struct {
 	color        string
 	selector     string
@@ -34,7 +29,6 @@ type Options struct {
 
 	restClientGetter genericclioptions.RESTClientGetter
 
-	mode      uint8
 	namespace string
 
 	podNamePattern       *regexp.Regexp
@@ -68,7 +62,6 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 		if len(o.selector) == 0 {
 			return fmt.Errorf("empty selector")
 		}
-		o.mode = modeByLabels
 	case 1:
 		if len(o.selector) > 0 {
 			return fmt.Errorf("label selector cannot be used here")
@@ -77,7 +70,6 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 		if err != nil {
 			return err
 		}
-		o.mode = modeByNameRegex
 	case 2:
 		if len(o.selector) > 0 {
 			return fmt.Errorf("label selector cannot be used here")
@@ -97,15 +89,16 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 		}
 		if isPod(obj) {
 			name, _ := meta.NewAccessor().Name(obj)
-			o.podNamePattern, _ = regexp.Compile(name)
-			o.mode = modeByNameRegex
+			o.podNamePattern, err = regexp.Compile(name)
+			if err != nil {
+				return err
+			}
 		} else {
 			selector, err := getPodsSelector(obj, getter)
 			if err != nil {
 				return err
 			}
 			o.selector = labels.FormatLabels(selector)
-			o.mode = modeByLabels
 		}
 	}
 	return nil

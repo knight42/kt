@@ -5,15 +5,12 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -84,29 +81,15 @@ func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (
 		return t.Spec.Selector, nil
 
 	// Deployment
-	case *extensionsv1beta1.Deployment:
-		return getMatchLabels(t.Spec.Selector)
 	case *appsv1.Deployment:
-		return getMatchLabels(t.Spec.Selector)
-	case *appsv1beta1.Deployment:
-		return getMatchLabels(t.Spec.Selector)
-	case *appsv1beta2.Deployment:
 		return getMatchLabels(t.Spec.Selector)
 
 	// DaemonSet
-	case *extensionsv1beta1.DaemonSet:
-		return getMatchLabels(t.Spec.Selector)
-	case *appsv1beta2.DaemonSet:
-		return getMatchLabels(t.Spec.Selector)
 	case *appsv1.DaemonSet:
 		return getMatchLabels(t.Spec.Selector)
 
 	// StatefulSet
 	case *appsv1.StatefulSet:
-		return getMatchLabels(t.Spec.Selector)
-	case *appsv1beta1.StatefulSet:
-		return getMatchLabels(t.Spec.Selector)
-	case *appsv1beta2.StatefulSet:
 		return getMatchLabels(t.Spec.Selector)
 
 	// Job
@@ -161,8 +144,6 @@ func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (
 
 	// ReplicaSet
 	case *appsv1.ReplicaSet:
-		return getMatchLabels(t.Spec.Selector)
-	case *extensionsv1beta1.ReplicaSet:
 		return getMatchLabels(t.Spec.Selector)
 	}
 	return nil, fmt.Errorf("unknown object: %#v", obj)
