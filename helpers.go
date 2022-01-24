@@ -12,7 +12,6 @@ import (
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -116,8 +115,6 @@ func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (
 
 	// CronJob
 	case *batchv1beta1.CronJob:
-		return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
-	case *batchv2alpha1.CronJob:
 		return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
 
 	// HPA
