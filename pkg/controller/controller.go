@@ -141,9 +141,6 @@ func (c *Controller) Run() error {
 		case watch.Added:
 			log.Errorf("+ [%s] pod added", pod.Name)
 			c.onPodAdded(pod)
-			if c.podsTailer[pod.UID] != nil {
-				c.podsTailer[pod.UID].Tail()
-			}
 		case watch.Modified:
 			log.V(4).Infof(">>>>> [DEBUG] pod modified: %s", pod.Name)
 			c.onPodModified(pod)
@@ -165,7 +162,7 @@ func (c *Controller) onPodAdded(pod *corev1.Pod) {
 		log.V(4).Infof(">>>>> [DEBUG] no container found for pod: %s regex: %s", pod.Name, c.containerNameRegex)
 		return
 	}
-	c.podsTailer[pod.UID] = tailer.New(
+	t := tailer.New(
 		c.namespace, pod.Name,
 		names,
 		c.enableColor,
@@ -173,6 +170,8 @@ func (c *Controller) onPodAdded(pod *corev1.Pod) {
 		c.logsOptions,
 		c.logCh,
 	)
+	t.Tail()
+	c.podsTailer[pod.UID] = t
 }
 
 func (c *Controller) onPodModified(pod *corev1.Pod) {
