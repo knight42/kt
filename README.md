@@ -1,6 +1,6 @@
-# kt ![](https://github.com/knight42/kt/workflows/Cross%20Platform%20Build/badge.svg)
+# kt ![](https://github.com/knight42/kt/workflows/CI/badge.svg)
 
-kt is short for Kubernetes Tail. It behaves like `kubect logs -f` and
+kt is short for Kubernetes Tail. It behaves like `kubectl logs -f` and
 its usage is similar to `kubectl get`.
 
 # Table of Contents
@@ -10,8 +10,10 @@ its usage is similar to `kubectl get`.
     * [1.1 Install bash/zsh completion](#11-install-bashzsh-completion)
     * [1.2 Filter pods by name or regexp](#12-filter-pods-by-name-or-regexp)
     * [1.3 Filter pods by labels](#13-filter-pods-by-labels)
-    * [1.4 Tails pods belong to a higher level object](#14-tails-pods-belong-to-a-higher-level-object)
-* [2. Installtion](#2-installtion)
+    * [1.4 Tail pods belong to a higher level object](#14-tails-pods-belong-to-a-higher-level-object)
+    * [1.5 Filter logs by query](#15-filter-logs-by-query)
+    * [1.6 Prefix mode](#16-prefix-mode)
+* [2. Installation](#2-installation)
 
 # 0. Features
 
@@ -19,6 +21,8 @@ its usage is similar to `kubectl get`.
 * Automatically tail new pods, discard deleted pods and retry if the pod
 switches to running phase from pending phase.
 * Recover from containers restart.
+* Filter logs by query DSL with `and`, `or`, parentheses, and quoted strings.
+* Auto-hide pod/container prefix when tailing a single container.
 * Auto completion.
 * Colorized output.
 
@@ -64,7 +68,7 @@ Currently only the following resources are supported:
 * Job
 * ReplicaSet
 * ReplicationController
-* Cronjob(partially supported. You must specify labels in the pod template.)
+* CronJob
 
 ```
 $ kt hpa foo
@@ -81,7 +85,38 @@ $ kt --context prod ds foo
 $ kt --cluster dev job foo
 ```
 
-# 2. Installtion
+#### 1.5 Filter logs by query
+
+Use `-q/--query` to filter log lines with a boolean DSL:
+
+```
+# Match lines containing both keywords
+$ kt deploy foo -q 'error and timeout'
+
+# Match lines containing either keyword
+$ kt deploy foo -q 'error or warning'
+
+# Use parentheses to group expressions (and binds tighter than or)
+$ kt deploy foo -q '(error or warn) and timeout'
+
+# Use quotes for keywords with spaces
+$ kt deploy foo -q '"error code" and 500'
+```
+
+#### 1.6 Prefix mode
+
+The `--prefix` flag controls pod/container prefix display:
+
+* `auto` (default): hide prefix when tailing a single pod with a single container
+* `always`: always show the prefix
+* `off`: never show the prefix
+
+```
+$ kt deploy foo --prefix=always
+$ kt deploy foo --prefix=off
+```
+
+# 2. Installation
 
 Using Homebrew:
 ```
