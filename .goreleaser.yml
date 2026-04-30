@@ -29,5 +29,8 @@ archives:
 checksum:
   name_template: checksums.txt
 
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
 changelog:
-  sort: asc
+  use: github-native
