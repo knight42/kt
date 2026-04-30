@@ -36,7 +36,7 @@ func TestShouldShowPrefix_Always(t *testing.T) {
 }
 
 func TestShouldShowPrefix_Off(t *testing.T) {
-	c := &Controller{prefixMode: "off"}
+	c := &Controller{prefixMode: "never"}
 	if c.shouldShowPrefix() {
 		t.Error("expected prefix to be hidden in off mode")
 	}
@@ -131,7 +131,7 @@ func TestOnPodAdded_PrefixStateSetBeforeTail(t *testing.T) {
 func TestUpdatePrefixState_SkipsNonAuto(t *testing.T) {
 	modes := map[string]struct{}{
 		"always": {},
-		"off":    {},
+		"never":  {},
 	}
 	for mode := range modes {
 		t.Run(mode, func(t *testing.T) {
