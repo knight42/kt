@@ -17,6 +17,7 @@ type Tailer interface {
 	Tail()
 	TailSync()
 	RetryContainers(names []string)
+	ContainerCount() int
 	Close()
 }
 
@@ -134,6 +135,10 @@ func (t *tailer) RetryContainers(names []string) {
 	if len(retried) > 0 {
 		log.V(5).Infof(">>>>> [DEBUG] modified pod: %s, retryable containers: %v", t.podName, retried)
 	}
+}
+
+func (t *tailer) ContainerCount() int {
+	return len(t.ctNames)
 }
 
 func (t *tailer) Close() {
