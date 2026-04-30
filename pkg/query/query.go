@@ -2,12 +2,14 @@ package query
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"unicode"
 )
 
 type Expr interface {
 	Match(line []byte) bool
+	Terms() [][]byte
 }
 
 type keyword struct {
@@ -18,6 +20,10 @@ func (k *keyword) Match(line []byte) bool {
 	return bytesContainsFold(line, k.term)
 }
 
+func (k *keyword) Terms() [][]byte {
+	return [][]byte{k.term}
+}
+
 type andExpr struct {
 	left, right Expr
 }
@@ -26,12 +32,20 @@ func (a *andExpr) Match(line []byte) bool {
 	return a.left.Match(line) && a.right.Match(line)
 }
 
+func (a *andExpr) Terms() [][]byte {
+	return append(a.left.Terms(), a.right.Terms()...)
+}
+
 type orExpr struct {
 	left, right Expr
 }
 
 func (o *orExpr) Match(line []byte) bool {
 	return o.left.Match(line) || o.right.Match(line)
+}
+
+func (o *orExpr) Terms() [][]byte {
+	return append(o.left.Terms(), o.right.Terms()...)
 }
 
 // Parse parses a query DSL string into an Expr.
@@ -226,4 +240,42 @@ func equalFold(a, b []byte) bool {
 		}
 	}
 	return true
+}
+
+var (
+	highlightStart = []byte("\033[1;31m")
+	highlightReset = []byte("\033[0m")
+)
+
+func Highlight(line []byte, terms [][]byte) []byte {
+	if len(terms) == 0 {
+		return line
+	}
+	sorted := make([][]byte, len(terms))
+	copy(sorted, terms)
+	sort.Slice(sorted, func(i, j int) bool {
+		return len(sorted[i]) > len(sorted[j])
+	})
+
+	var buf []byte
+	i := 0
+	for i < len(line) {
+		matched := false
+		for _, term := range sorted {
+			tl := len(term)
+			if i+tl <= len(line) && equalFold(line[i:i+tl], term) {
+				buf = append(buf, highlightStart...)
+				buf = append(buf, line[i:i+tl]...)
+				buf = append(buf, highlightReset...)
+				i += tl
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			buf = append(buf, line[i])
+			i++
+		}
+	}
+	return buf
 }
