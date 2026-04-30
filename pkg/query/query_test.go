@@ -1,6 +1,9 @@
 package query
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 func TestParse_Match(t *testing.T) {
 	tests := map[string]struct {
@@ -127,6 +130,128 @@ func TestParse_Errors(t *testing.T) {
 			_, err := Parse(input)
 			if err == nil {
 				t.Errorf("Parse(%q) expected error, got nil", input)
+			}
+		})
+	}
+}
+
+func TestTerms(t *testing.T) {
+	tests := map[string]struct {
+		query string
+		want  []string
+	}{
+		"single keyword": {
+			query: "error",
+			want:  []string{"error"},
+		},
+		"and expression": {
+			query: "error and fatal",
+			want:  []string{"error", "fatal"},
+		},
+		"or expression": {
+			query: "error or warning",
+			want:  []string{"error", "warning"},
+		},
+		"nested": {
+			query: "(a or b) and c",
+			want:  []string{"a", "b", "c"},
+		},
+		"quoted keyword": {
+			query: `"error code" and fatal`,
+			want:  []string{"error code", "fatal"},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			expr, err := Parse(tt.query)
+			if err != nil {
+				t.Fatalf("Parse(%q) error: %v", tt.query, err)
+			}
+			got := expr.Terms()
+			if len(got) != len(tt.want) {
+				t.Fatalf("Terms() returned %d terms, want %d", len(got), len(tt.want))
+			}
+			for i, want := range tt.want {
+				if !bytes.Equal(got[i], []byte(want)) {
+					t.Errorf("Terms()[%d] = %q, want %q", i, got[i], want)
+				}
+			}
+		})
+	}
+}
+
+func TestHighlight(t *testing.T) {
+	hl := func(s string) string {
+		return "\033[1;31m" + s + "\033[0m"
+	}
+
+	tests := map[string]struct {
+		line  string
+		terms []string
+		want  string
+	}{
+		"no terms": {
+			line:  "hello world",
+			terms: nil,
+			want:  "hello world",
+		},
+		"single match": {
+			line:  "an error occurred",
+			terms: []string{"error"},
+			want:  "an " + hl("error") + " occurred",
+		},
+		"case insensitive": {
+			line:  "an ERROR occurred",
+			terms: []string{"error"},
+			want:  "an " + hl("ERROR") + " occurred",
+		},
+		"multiple terms": {
+			line:  "fatal error occurred",
+			terms: []string{"fatal", "error"},
+			want:  hl("fatal") + " " + hl("error") + " occurred",
+		},
+		"no match": {
+			line:  "all good",
+			terms: []string{"error"},
+			want:  "all good",
+		},
+		"overlapping prefers longer": {
+			line:  "error_code found",
+			terms: []string{"err", "error_code"},
+			want:  hl("error_code") + " found",
+		},
+		"multiple occurrences": {
+			line:  "error and error again",
+			terms: []string{"error"},
+			want:  hl("error") + " and " + hl("error") + " again",
+		},
+		"match at start": {
+			line:  "error!",
+			terms: []string{"error"},
+			want:  hl("error") + "!",
+		},
+		"match at end": {
+			line:  "got error",
+			terms: []string{"error"},
+			want:  "got " + hl("error"),
+		},
+		"quoted multi-word term": {
+			line:  "fatal error code 500",
+			terms: []string{"error code"},
+			want:  "fatal " + hl("error code") + " 500",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var terms [][]byte
+			for _, s := range tt.terms {
+				terms = append(terms, []byte(s))
+			}
+			got := Highlight([]byte(tt.line), terms)
+			if !bytes.Equal(got, []byte(tt.want)) {
+				t.Errorf("Highlight() = %q, want %q", got, tt.want)
 			}
 		})
 	}

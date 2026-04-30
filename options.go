@@ -60,7 +60,7 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 	}
 
 	switch o.prefix {
-	case "auto", "always", "off":
+	case "auto", "always", "never":
 	default:
 		return fmt.Errorf("unknown value of flag `prefix`: %s", o.prefix)
 	}

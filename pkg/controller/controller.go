@@ -195,7 +195,7 @@ func (c *Controller) shouldShowPrefix() bool {
 	switch c.prefixMode {
 	case "always":
 		return true
-	case "off":
+	case "never":
 		return false
 	default:
 		return !c.singlePodContainer.Load()
@@ -203,6 +203,10 @@ func (c *Controller) shouldShowPrefix() bool {
 }
 
 func (c *Controller) consumeLog() {
+	var queryTerms [][]byte
+	if c.queryExpr != nil {
+		queryTerms = c.queryExpr.Terms()
+	}
 	w := bufio.NewWriter(os.Stdout)
 	for i := range c.logCh {
 		if c.queryExpr != nil && !c.queryExpr.Match(i.Content) {
@@ -216,7 +220,11 @@ func (c *Controller) consumeLog() {
 				_, _ = w.WriteString(i.Pod + "[" + i.Container + "] ")
 			}
 		}
-		_, _ = w.Write(i.Content)
+		content := i.Content
+		if len(queryTerms) > 0 && c.enableColor {
+			content = query.Highlight(content, queryTerms)
+		}
+		_, _ = w.Write(content)
 		_ = w.Flush()
 	}
 }
