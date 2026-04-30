@@ -27,8 +27,7 @@ type Controller struct {
 	namespace    string
 	color        string
 	nodeName     string
-	exitWithPods bool
-	prefixMode   string
+	prefixMode string
 	logsOptions  *corev1.PodLogOptions
 
 	enableColor        bool
@@ -110,23 +109,6 @@ func (c *Controller) Run() error {
 
 	byName := c.podNameRegex != nil
 
-	if c.logsOptions.Previous {
-		err := result.Visit(func(info *resource.Info, err error) error {
-			pod, ok := info.Object.(*corev1.Pod)
-			if !ok {
-				return nil
-			}
-			if byName && !c.podNameRegex.MatchString(pod.Name) {
-				return nil
-			}
-			log.Errorf("+ [%s] pod added", pod.Name)
-			c.onPodAdded(pod)
-			c.podsTailer[pod.UID].TailSync()
-			return nil
-		})
-		return err
-	}
-
 	watcher, err := result.Watch("")
 	if err != nil {
 		return err
@@ -151,9 +133,6 @@ func (c *Controller) Run() error {
 		case watch.Deleted:
 			log.Errorf("- [%s] pod deleted", pod.Name)
 			c.onPodDeleted(pod)
-			if c.exitWithPods && len(c.podsTailer) == 0 {
-				return nil
-			}
 		}
 	}
 	return nil

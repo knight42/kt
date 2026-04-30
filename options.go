@@ -19,10 +19,8 @@ type Options struct {
 	selector     string
 	sinceSeconds time.Duration
 	sinceTime    string
-	previous     bool
-	timestamps   bool
-	exitWithPods bool
-	prefix       string
+	timestamps bool
+	prefix string
 	tail         int64
 	container    string
 	nodeName     string
@@ -120,7 +118,6 @@ func (o *Options) Run(cmd *cobra.Command) error {
 		controller.WithPodLabelsSelector(o.selector),
 		controller.WithPodNameRegexp(o.podNamePattern),
 		controller.WithContainerNameRegexp(o.containerNamePattern),
-		controller.EnableExitWithPods(o.exitWithPods),
 		controller.WithPrefixMode(o.prefix),
 		controller.WithNodeName(o.nodeName),
 	)
@@ -129,9 +126,8 @@ func (o *Options) Run(cmd *cobra.Command) error {
 
 func (o *Options) toLogsOptions() (corev1.PodLogOptions, error) {
 	opt := corev1.PodLogOptions{
-		Follow:     !o.previous,
+		Follow:     true,
 		Timestamps: o.timestamps,
-		Previous:   o.previous,
 	}
 	if len(o.sinceTime) > 0 {
 		t, err := parseRFC3339(o.sinceTime)

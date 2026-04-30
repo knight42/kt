@@ -15,7 +15,6 @@ import (
 
 type Tailer interface {
 	Tail()
-	TailSync()
 	RetryContainers(names []string)
 	ContainerCount() int
 	Close()
@@ -70,12 +69,6 @@ func (t *tailer) Tail() {
 		k := t.newTask(ct)
 		t.tasks[ct] = k
 		go k.Job()
-	}
-}
-
-func (t *tailer) TailSync() {
-	for ct := range t.ctNames {
-		t.newTask(ct).Job()
 	}
 }
 

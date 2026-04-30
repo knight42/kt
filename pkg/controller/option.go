@@ -30,12 +30,6 @@ func WithColor(when string) Option {
 	}
 }
 
-func EnableExitWithPods(enable bool) Option {
-	return func(t *Controller) {
-		t.exitWithPods = enable
-	}
-}
-
 func WithPrefixMode(mode string) Option {
 	return func(t *Controller) {
 		t.prefixMode = mode
