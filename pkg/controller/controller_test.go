@@ -3,20 +3,29 @@ package controller
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 
+	"github.com/knight42/kt/pkg/api"
 	"github.com/knight42/kt/pkg/tailer"
 )
 
 type fakeTailer struct {
 	containerCount int
+	onTail         func()
 }
 
-func (f *fakeTailer) Tail()                       {}
-func (f *fakeTailer) TailSync()                   {}
+func (f *fakeTailer) Tail() {
+	if f.onTail != nil {
+		f.onTail()
+	}
+}
+func (f *fakeTailer) TailSync()                    {}
 func (f *fakeTailer) RetryContainers(names []string) {}
-func (f *fakeTailer) ContainerCount() int         { return f.containerCount }
-func (f *fakeTailer) Close()                      {}
+func (f *fakeTailer) ContainerCount() int          { return f.containerCount }
+func (f *fakeTailer) Close()                       {}
 
 var _ tailer.Tailer = (*fakeTailer)(nil)
 
@@ -76,6 +85,47 @@ func TestShouldShowPrefix_Auto(t *testing.T) {
 				t.Errorf("shouldShowPrefix() = %v, want %v", got, tt.wantPrefix)
 			}
 		})
+	}
+}
+
+func TestOnPodAdded_PrefixStateSetBeforeTail(t *testing.T) {
+	tailCalled := false
+	prefixCorrectAtTailTime := false
+
+	c := &Controller{
+		prefixMode:  "auto",
+		podsTailer:  make(map[types.UID]tailer.Tailer),
+		logCh:       make(chan *api.Log, 1),
+		logsOptions: &corev1.PodLogOptions{},
+	}
+	c.newTailerFn = func(ns, name string, ctNames map[string]struct{}, enableColor bool, client kubernetes.Interface, logsOptions *corev1.PodLogOptions, logCh chan<- *api.Log) tailer.Tailer {
+		ft := &fakeTailer{containerCount: len(ctNames)}
+		ft.onTail = func() {
+			tailCalled = true
+			prefixCorrectAtTailTime = !c.shouldShowPrefix()
+		}
+		return ft
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-pod",
+			UID:  "uid-1",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{Name: "app"},
+			},
+		},
+	}
+
+	c.onPodAdded(pod)
+
+	if !tailCalled {
+		t.Fatal("Tail() was not called")
+	}
+	if !prefixCorrectAtTailTime {
+		t.Error("prefix state must be set before Tail(); single pod with single container should hide prefix at Tail() time")
 	}
 }
 

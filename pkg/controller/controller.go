@@ -41,7 +41,8 @@ type Controller struct {
 	podNameRegex       *regexp.Regexp
 	containerNameRegex *regexp.Regexp
 
-	podsTailer map[types.UID]tailer.Tailer
+	podsTailer   map[types.UID]tailer.Tailer
+	newTailerFn  func(ns, name string, ctNames map[string]struct{}, enableColor bool, client kubernetes.Interface, logsOptions *corev1.PodLogOptions, logCh chan<- *api.Log) tailer.Tailer
 }
 
 func New(f genericclioptions.RESTClientGetter, logsOpts *corev1.PodLogOptions, opts ...Option) *Controller {
@@ -50,6 +51,7 @@ func New(f genericclioptions.RESTClientGetter, logsOpts *corev1.PodLogOptions, o
 		logCh:       make(chan *api.Log, 1),
 		logsOptions: logsOpts,
 		podsTailer:  make(map[types.UID]tailer.Tailer),
+		newTailerFn: tailer.New,
 	}
 	for _, o := range opts {
 		o(c)
@@ -164,7 +166,7 @@ func (c *Controller) onPodAdded(pod *corev1.Pod) {
 		log.V(4).Infof(">>>>> [DEBUG] no container found for pod: %s regex: %s", pod.Name, c.containerNameRegex)
 		return
 	}
-	t := tailer.New(
+	t := c.newTailerFn(
 		c.namespace, pod.Name,
 		names,
 		c.enableColor,
@@ -172,9 +174,9 @@ func (c *Controller) onPodAdded(pod *corev1.Pod) {
 		c.logsOptions,
 		c.logCh,
 	)
-	t.Tail()
 	c.podsTailer[pod.UID] = t
 	c.updatePrefixState()
+	t.Tail()
 }
 
 func (c *Controller) onPodModified(pod *corev1.Pod) {
