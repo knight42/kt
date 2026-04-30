@@ -2,6 +2,8 @@ package controller
 
 import (
 	"regexp"
+
+	"github.com/knight42/kt/pkg/query"
 )
 
 type Option func(t *Controller)
@@ -39,5 +41,11 @@ func WithPrefixMode(mode string) Option {
 func WithNodeName(nodeName string) Option {
 	return func(t *Controller) {
 		t.nodeName = nodeName
+	}
+}
+
+func WithQuery(expr query.Expr) Option {
+	return func(t *Controller) {
+		t.queryExpr = expr
 	}
 }

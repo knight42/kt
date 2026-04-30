@@ -76,6 +76,7 @@ func main() {
 	flags.StringVar(&o.color, "color", "auto", "Colorize the output. One of: auto|always|never")
 	flags.DurationVar(&o.sinceSeconds, "since", o.sinceSeconds, "Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs. Only one of since-time / since may be used.")
 	flags.StringVar(&o.nodeName, "node-name", "", "The name of the node that pods running on")
+	flags.StringVarP(&o.queryStr, "query", "q", "", "Filter logs by query DSL (e.g. 'error and fatal', 'err or warn', '\"error code\" and timeout')")
 
 	log.AddFlags(flags)
 
