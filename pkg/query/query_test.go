@@ -83,6 +83,21 @@ func TestParse_Match(t *testing.T) {
 			line:  "b d",
 			want:  true,
 		},
+		"quoted and is a keyword not operator": {
+			query: `"and" or error`,
+			line:  "and",
+			want:  true,
+		},
+		"quoted or is a keyword not operator": {
+			query: `"or"`,
+			line:  "or happened",
+			want:  true,
+		},
+		"quoted or does not act as operator": {
+			query: `"or"`,
+			line:  "something else",
+			want:  false,
+		},
 	}
 
 	for name, tt := range tests {
