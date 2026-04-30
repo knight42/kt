@@ -22,7 +22,7 @@ type Options struct {
 	previous     bool
 	timestamps   bool
 	exitWithPods bool
-	noPrefix     bool
+	prefix       string
 	tail         int64
 	container    string
 	nodeName     string
@@ -55,6 +55,12 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 	case "auto", "always", "never":
 	default:
 		return fmt.Errorf("unknown value of flag `color`: %s", o.color)
+	}
+
+	switch o.prefix {
+	case "auto", "always", "off":
+	default:
+		return fmt.Errorf("unknown value of flag `prefix`: %s", o.prefix)
 	}
 
 	switch len(args) {
@@ -115,7 +121,7 @@ func (o *Options) Run(cmd *cobra.Command) error {
 		controller.WithPodNameRegexp(o.podNamePattern),
 		controller.WithContainerNameRegexp(o.containerNamePattern),
 		controller.EnableExitWithPods(o.exitWithPods),
-		controller.WithPrefix(!o.noPrefix),
+		controller.WithPrefixMode(o.prefix),
 		controller.WithNodeName(o.nodeName),
 	)
 	return c.Run()

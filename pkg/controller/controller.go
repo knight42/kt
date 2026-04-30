@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sync/atomic"
 
 	"github.com/fatih/color"
 	corev1 "k8s.io/api/core/v1"
@@ -27,10 +28,11 @@ type Controller struct {
 	color        string
 	nodeName     string
 	exitWithPods bool
-	showPrefix   bool
+	prefixMode   string
 	logsOptions  *corev1.PodLogOptions
 
-	enableColor bool
+	enableColor        bool
+	singlePodContainer atomic.Bool
 
 	labelSelector string
 
@@ -172,6 +174,7 @@ func (c *Controller) onPodAdded(pod *corev1.Pod) {
 	)
 	t.Tail()
 	c.podsTailer[pod.UID] = t
+	c.updatePrefixState()
 }
 
 func (c *Controller) onPodModified(pod *corev1.Pod) {
@@ -189,12 +192,37 @@ func (c *Controller) onPodDeleted(pod *corev1.Pod) {
 	}
 	t.Close()
 	delete(c.podsTailer, pod.UID)
+	c.updatePrefixState()
+}
+
+func (c *Controller) updatePrefixState() {
+	if c.prefixMode != "auto" {
+		return
+	}
+	single := len(c.podsTailer) == 1
+	if single {
+		for _, t := range c.podsTailer {
+			single = t.ContainerCount() == 1
+		}
+	}
+	c.singlePodContainer.Store(single)
+}
+
+func (c *Controller) shouldShowPrefix() bool {
+	switch c.prefixMode {
+	case "always":
+		return true
+	case "off":
+		return false
+	default:
+		return !c.singlePodContainer.Load()
+	}
 }
 
 func (c *Controller) consumeLog() {
 	w := bufio.NewWriter(os.Stdout)
 	for i := range c.logCh {
-		if c.showPrefix {
+		if c.shouldShowPrefix() {
 			if i.PodColor != nil {
 				_, _ = i.PodColor.Fprint(w, i.Pod)
 				_, _ = i.ContainerColor.Fprintf(w, "[%s] ", i.Container)

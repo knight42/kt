@@ -36,9 +36,9 @@ func EnableExitWithPods(enable bool) Option {
 	}
 }
 
-func WithPrefix(enable bool) Option {
+func WithPrefixMode(mode string) Option {
 	return func(t *Controller) {
-		t.showPrefix = enable
+		t.prefixMode = mode
 	}
 }
 
