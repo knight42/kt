@@ -22,7 +22,6 @@ func (f *fakeTailer) Tail() {
 		f.onTail()
 	}
 }
-func (f *fakeTailer) TailSync()                    {}
 func (f *fakeTailer) RetryContainers(names []string) {}
 func (f *fakeTailer) ContainerCount() int          { return f.containerCount }
 func (f *fakeTailer) Close()                       {}
