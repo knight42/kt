@@ -6,10 +6,8 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -97,7 +95,7 @@ func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (
 		return getMatchLabels(t.Spec.Selector)
 
 	// CronJob
-	case *batchv1beta1.CronJob:
+	case *batchv1.CronJob:
 		return t.Spec.JobTemplate.Spec.Template.GetLabels(), nil
 
 	// HPA
@@ -113,19 +111,7 @@ func getPodsSelector(obj runtime.Object, f genericclioptions.RESTClientGetter) (
 			return nil, err
 		}
 		return getPodsSelector(refObj, f)
-	case *autoscalingv2beta1.HorizontalPodAutoscaler:
-		ref := t.Spec.ScaleTargetRef
-		refObj, err := getRefObj(objectReference{
-			APIVersion: ref.APIVersion,
-			Kind:       ref.Kind,
-			Name:       ref.Name,
-			Namespace:  t.Namespace,
-		}, f)
-		if err != nil {
-			return nil, err
-		}
-		return getPodsSelector(refObj, f)
-	case *autoscalingv2beta2.HorizontalPodAutoscaler:
+	case *autoscalingv2.HorizontalPodAutoscaler:
 		ref := t.Spec.ScaleTargetRef
 		refObj, err := getRefObj(objectReference{
 			APIVersion: ref.APIVersion,
