@@ -12,6 +12,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
 	"github.com/knight42/kt/pkg/controller"
+	"github.com/knight42/kt/pkg/query"
 )
 
 type Options struct {
@@ -22,10 +23,13 @@ type Options struct {
 	timestamps bool
 	prefix string
 	tail         int64
-	container    string
-	nodeName     string
+	container string
+	nodeName  string
+	queryStr  string
 
 	restClientGetter genericclioptions.RESTClientGetter
+
+	queryExpr query.Expr
 
 	namespace string
 
@@ -59,6 +63,13 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 	case "auto", "always", "off":
 	default:
 		return fmt.Errorf("unknown value of flag `prefix`: %s", o.prefix)
+	}
+
+	if len(o.queryStr) > 0 {
+		o.queryExpr, err = query.Parse(o.queryStr)
+		if err != nil {
+			return fmt.Errorf("invalid query: %w", err)
+		}
 	}
 
 	switch len(args) {
@@ -120,6 +131,7 @@ func (o *Options) Run(cmd *cobra.Command) error {
 		controller.WithContainerNameRegexp(o.containerNamePattern),
 		controller.WithPrefixMode(o.prefix),
 		controller.WithNodeName(o.nodeName),
+		controller.WithQuery(o.queryExpr),
 	)
 	return c.Run()
 }

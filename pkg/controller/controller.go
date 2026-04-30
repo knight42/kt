@@ -18,6 +18,7 @@ import (
 
 	"github.com/knight42/kt/pkg/api"
 	"github.com/knight42/kt/pkg/log"
+	"github.com/knight42/kt/pkg/query"
 	"github.com/knight42/kt/pkg/tailer"
 )
 
@@ -40,6 +41,7 @@ type Controller struct {
 	podNameRegex       *regexp.Regexp
 	containerNameRegex *regexp.Regexp
 
+	queryExpr  query.Expr
 	podsTailer   map[types.UID]tailer.Tailer
 	newTailerFn  func(ns, name string, ctNames map[string]struct{}, enableColor bool, client kubernetes.Interface, logsOptions *corev1.PodLogOptions, logCh chan<- *api.Log) tailer.Tailer
 }
@@ -203,6 +205,9 @@ func (c *Controller) shouldShowPrefix() bool {
 func (c *Controller) consumeLog() {
 	w := bufio.NewWriter(os.Stdout)
 	for i := range c.logCh {
+		if c.queryExpr != nil && !c.queryExpr.Match(i.Content) {
+			continue
+		}
 		if c.shouldShowPrefix() {
 			if i.PodColor != nil {
 				_, _ = i.PodColor.Fprint(w, i.Pod)
