@@ -1,0 +1,33 @@
+version: 2
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/knight42/kt/pkg/version.Version={{.Version}}
+      - -X github.com/knight42/kt/pkg/version.BuildDate={{.Date}}
+      - -X github.com/knight42/kt/pkg/version.GitCommit={{.Commit}}
+    flags:
+      - -trimpath
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
