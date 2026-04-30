@@ -1,7 +1,13 @@
 package completion
 
-const (
-	bashCompletionFunc = `# call kt $1,
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+)
+
+const bashCompletionFunc = `# call kt $1,
 __kt_debug_out()
 {
     local cmd="$1"
@@ -95,22 +101,45 @@ __kt_custom_func() {
     __kt_get_resource
 }
 `
-)
 
-var (
-	bashCompletionFlags = map[string]string{
-		"namespace": "__kt_get_resource_namespace",
-		"context":   "__kt_config_get_contexts",
-		"cluster":   "__kt_config_get_clusters",
-		"user":      "__kt_config_get_users",
-		"color":     "__kt_parse_color",
+var bashCompletionFlags = map[string]string{
+	"namespace": "__kt_get_resource_namespace",
+	"context":   "__kt_config_get_contexts",
+	"cluster":   "__kt_config_get_clusters",
+	"user":      "__kt_config_get_users",
+	"color":     "__kt_parse_color",
 
-		"container":  "__kt_abort",
-		"kubeconfig": "__kt_abort",
-		"selector":   "__kt_abort",
-		"server":     "__kt_abort",
-		"since":      "__kt_abort",
-		"since-time": "__kt_abort",
-		"tail":       "__kt_abort",
+	"container":  "__kt_abort",
+	"kubeconfig": "__kt_abort",
+	"selector":   "__kt_abort",
+	"server":     "__kt_abort",
+	"since":      "__kt_abort",
+	"since-time": "__kt_abort",
+	"tail":       "__kt_abort",
+}
+
+func Generate(cmd *cobra.Command, shell string) error {
+	cmd.BashCompletionFunction = bashCompletionFunc
+	for name, comp := range bashCompletionFlags {
+		f := cmd.Flag(name)
+		if f == nil {
+			continue
+		}
+		if f.Annotations == nil {
+			f.Annotations = map[string][]string{}
+		}
+		f.Annotations[cobra.BashCompCustom] = append(
+			f.Annotations[cobra.BashCompCustom],
+			comp,
+		)
 	}
-)
+
+	switch shell {
+	case "bash":
+		return cmd.GenBashCompletion(os.Stdout)
+	case "zsh":
+		return cmd.GenZshCompletion(os.Stdout)
+	default:
+		return fmt.Errorf("unknown shell: %s", shell)
+	}
+}
