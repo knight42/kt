@@ -37,6 +37,19 @@ type Options struct {
 	containerNamePattern *regexp.Regexp
 }
 
+func normalizeColor(color string) (string, error) {
+	switch color {
+	case "auto":
+		return "auto", nil
+	case "always", "on", "yes":
+		return "always", nil
+	case "never", "off", "no":
+		return "never", nil
+	default:
+		return "", fmt.Errorf("unknown value of flag `color`: %s", color)
+	}
+}
+
 func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []string) error {
 	o.restClientGetter = getter
 
@@ -53,10 +66,9 @@ func (o *Options) Complete(getter genericclioptions.RESTClientGetter, args []str
 		}
 	}
 
-	switch o.color {
-	case "auto", "always", "never":
-	default:
-		return fmt.Errorf("unknown value of flag `color`: %s", o.color)
+	o.color, err = normalizeColor(o.color)
+	if err != nil {
+		return err
 	}
 
 	switch o.prefix {
