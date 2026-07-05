@@ -91,7 +91,7 @@ __kt_get_resource_namespace()
 }
 __kt_parse_color()
 {
-    local kt_out=('auto' 'never' 'always')
+    local kt_out=('auto' 'never' 'always' 'on' 'off' 'yes' 'no')
     COMPREPLY+=( $( compgen -W "${kt_out[*]}" -- "$cur" ) )
 }
 __kt_abort() {
